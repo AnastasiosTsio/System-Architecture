@@ -1,6 +1,6 @@
 megs: 16
-romimage: file="/usr/local/share/bochs/BIOS-bochs-latest"
-vgaromimage: file="/usr/local/share/bochs/VGABIOS-lgpl-latest"
+romimage: file="$TOOLCHAIN_DIR/bochs/share/bochs/BIOS-bochs-latest"
+vgaromimage: file="$TOOLCHAIN_DIR/bochs/share/bochs/VGABIOS-lgpl-latest"
 boot: cdrom
 log: bochsout.txt
 mouse: enabled=0
