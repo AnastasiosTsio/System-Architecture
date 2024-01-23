@@ -1,3 +1,7 @@
+# About This Repository
+
+Welcome to the repository for System-Architecture courses! It's important to note that the initial codebase and the repository itself were not originally created by me. This repository serves as a dynamic learning platform for my coursework in System Architecture. Throughout this course, we are delving deep into the principles of system architecture, actively engaging with the code, modifying existing structures, and seeking potential improvements. Our objective is to not only understand the intricacies of system design but also to apply practical enhancements and optimizations. This hands-on approach allows us to gain real-world experience in system architecture, contributing to our overall understanding and skill development in the field.
+
 # Nanvix
 
 [![Join us on Slack!](https://img.shields.io/badge/chat-on%20Slack-e01563.svg)](https://join.slack.com/t/nanvix/shared_invite/zt-1yu30bs28-nsNmw8IwCyh6MBBV~B~X7w)
