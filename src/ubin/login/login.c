@@ -142,7 +142,7 @@ int main(int argc, char *const argv[])
 
 	ioctl(fileno(stdout), TTY_CLEAR);
 
-	printf("Nanvix - A Free Educational Operating System\n\n");
+	printf("Nanvix v2 - A Free Educational Operating System\n\n");
 	printf("The programs included with Nanvix system are free software\n");
 	printf("under the GNU General Public License Version 3.\n\n");
 	printf("Nanvix comes with ABSOLUTELY NO WARRANTY, to the extent\n");
