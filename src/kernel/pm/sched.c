@@ -63,11 +63,12 @@ PUBLIC void resume(struct process *proc)
 // Define the enum
 typedef enum {FIFO, PRIO, RRORBIN} ProcessMethod;
 
-PUBLIC ProcessMethod method = FIFO;
+PUBLIC ProcessMethod method = PRIO;
 
-PRIVATE void fifo(struct process *p){
+PRIVATE void fifo(){
 	struct process *next = IDLE;
-	for (p = FIRST_PROC; p <= LAST_PROC; p++)
+	struct process *p;
+	for (p=FIRST_PROC; p <= LAST_PROC; p++)
 	{
 		/* Skip non-ready process. */
 		if (p->state != PROC_READY)
@@ -99,12 +100,43 @@ PRIVATE void fifo(struct process *p){
 		switch_to(next);
 }
 
-PRIVATE void prio(struct process *p){
-	//
+PRIVATE void prio(){
+	struct process *next = IDLE;
+	struct process *p;
+	for (p=FIRST_PROC; p <= LAST_PROC; p++)
+	{
+		/* Skip non-ready process. */
+		if (p->state != PROC_READY || p == IDLE)
+			continue;
+		
+		/*
+		 * Process with higher
+		 * priority found.
+		 */
+		if (p->nice < next->nice || next == IDLE)
+		{
+			next = p;
+		}
+
+		else if (p->nice == next->nice)
+		{
+			if (p->utime + p->ktime < next->utime + next->ktime)
+			{
+				next = p;
+			}
+		}
+	}
+
+	/* Switch to next process. */
+	next->priority = PRIO_USER;
+	next->state = PROC_RUNNING;
+	next->counter = PROC_QUANTUM;
+	if (curr_proc != next)
+		switch_to(next);
 }
 
-PRIVATE void rrorbin(struct process *p){
-	//
+PRIVATE void rrorbin(){
+	
 }
 /**
  * @brief Yields the processor.
@@ -136,13 +168,13 @@ PUBLIC void yield(void)
 	/* Choose a process to run next. */
 	switch(method){
 		case FIFO:
-			fifo(p);
+			fifo();
 			break;
 		case PRIO:
-			prio(p);
+			prio();
 			break;
 		case RRORBIN:
-			rrorbin(p);
+			rrorbin();
 			break;
 	}
 }
