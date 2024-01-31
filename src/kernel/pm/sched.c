@@ -24,6 +24,42 @@
 #include <nanvix/pm.h>
 #include <signal.h>
 
+#include <nanvix/klib.h>
+
+// PRIVATE struct process* ready_processes[PROC_MAX]; // Array to store pointers to ready processes
+// PRIVATE int ready_count = 0; // Count of ready processes
+
+
+// PRIVATE int exists(struct process* proc) {
+//     for (int i = 0; i < ready_count; i++) {
+//         if (ready_processes[i] == proc) {
+//             return 1; // Process found in the ready list
+//         }
+//     }
+//     return 0; // Process not found
+// }
+
+// // Function to add a process to the ready list
+// PRIVATE void add_to_ready_list(struct process* proc) {
+//     if (!exists(proc)) {
+//         ready_processes[ready_count] = proc;
+// 		ready_count++;
+//     }
+// }
+
+// PRIVATE void remove_from_ready_list(struct process* proc) {
+//     for (int i = 0; i < ready_count; i++) {
+//         if (ready_processes[i] == proc) {
+//             // Shift remaining processes down one position
+//             for (int j = i; j < ready_count - 1; j++) {
+//                 ready_processes[j] = ready_processes[j + 1];
+//             }
+//             ready_count--;
+//             return;
+//         }
+//     }
+// }
+
 /**
  * @brief Schedules a process to execution.
  *
@@ -31,6 +67,7 @@
  */
 PUBLIC void sched(struct process *proc)
 {
+	//add_to_ready_list(proc);
 	proc->state = PROC_READY;
 	proc->counter = 0;
 }
@@ -40,6 +77,7 @@ PUBLIC void sched(struct process *proc)
  */
 PUBLIC void stop(void)
 {
+	//remove_from_ready_list(curr_proc);
 	curr_proc->state = PROC_STOPPED;
 	sndsig(curr_proc->father, SIGCHLD);
 	yield();
@@ -61,9 +99,9 @@ PUBLIC void resume(struct process *proc)
 
 //enum with FIFO, PRIO, RRORBIN
 // Define the enum
-typedef enum {FIFO, PRIO, RRORBIN} ProcessMethod;
+typedef enum {FIFO, PRIO, RRORBIN, RANDOM} ProcessMethod;
 
-PUBLIC ProcessMethod method = RRORBIN;
+PUBLIC ProcessMethod method = RANDOM;
 
 PRIVATE void fifo(){
 	struct process *next = IDLE;
@@ -164,6 +202,69 @@ PRIVATE void rrorbin(){
     if (curr_proc != next)
         switch_to(next);
 }
+
+
+//tried using an array to optimize it but it doesn't work
+// PRIVATE void random() {
+// 	struct process* p;
+// 	int i = ready_count;
+// 	srand(1); // Seed the random number generator with the current time
+//     if (i> 0) {
+//         int idx = krand() % i; // Select a random index within the ready list
+//         p = ready_processes[idx];
+//     }
+// 	else{
+// 		p = IDLE;
+// 	}
+
+// 	p->priority = PRIO_USER;
+// 	p->state = PROC_RUNNING;
+// 	p->counter = PROC_QUANTUM;
+// 	if (curr_proc != p)
+// 		switch_to(p);
+// }
+
+
+PRIVATE void random() {
+    int nReady = 0; // Number of ready processes
+    struct process *p;
+    // First pass: Count the number of ready processes
+    for (p = FIRST_PROC; p <= LAST_PROC; p++) {
+        if (p->state == PROC_READY) {
+            nReady++;
+        }
+    }
+    
+    if (nReady > 0) {
+		ksrand(ticks); // Seed the random number generator with the current time
+        int target = krand() % nReady; // Select a target index at random
+        nReady = 0; // Reset counter to reuse for indexing
+        
+        // Second pass: Find the target process
+        for (p = FIRST_PROC; p <= LAST_PROC; p++) {
+            if (p->state == PROC_READY) {
+                if (nReady == target) {
+                    // This is the selected process
+                    p->priority = PRIO_USER;
+                    p->state = PROC_RUNNING;
+                    p->counter = PROC_QUANTUM;
+                    if (curr_proc != p)
+                        switch_to(p);
+                    return; // Exit after switching to the selected process
+                }
+                nReady++;
+            }
+        }
+    }
+	p = IDLE;
+	p->priority = PRIO_USER;
+    p->state = PROC_RUNNING;
+    p->counter = PROC_QUANTUM;
+    if (curr_proc != p)
+        switch_to(p);
+}
+
+
 /**
  * @brief Yields the processor.
  */
@@ -201,6 +302,9 @@ PUBLIC void yield(void)
 			break;
 		case RRORBIN:
 			rrorbin();
+			break;
+		case RANDOM:
+			random();
 			break;
 		default:
 			break;
