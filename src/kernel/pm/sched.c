@@ -60,6 +60,8 @@
 //     }
 // }
 
+PUBLIC int total_nb_tickets = 0;
+PUBLIC int nReady = 0;
 /**
  * @brief Schedules a process to execution.
  *
@@ -99,9 +101,7 @@ PUBLIC void resume(struct process *proc)
 
 //enum with FIFO, PRIO, RRORBIN
 // Define the enum
-typedef enum {FIFO, PRIO, RRORBIN, RANDOM} ProcessMethod;
-
-PUBLIC ProcessMethod method = RANDOM;
+typedef enum {FIFO, PRIO, RRORBIN, RANDOM, LOTTERY} ProcessMethod;
 
 PRIVATE void fifo(){
 	struct process *next = IDLE;
@@ -226,24 +226,17 @@ PRIVATE void rrorbin(){
 
 
 PRIVATE void random() {
-    int nReady = 0; // Number of ready processes
     struct process *p;
-    // First pass: Count the number of ready processes
-    for (p = FIRST_PROC; p <= LAST_PROC; p++) {
-        if (p->state == PROC_READY) {
-            nReady++;
-        }
-    }
     
     if (nReady > 0) {
-		ksrand(ticks); // Seed the random number generator with the current time
+		ksrand(1); // Seed the random number generator with the current time
         int target = krand() % nReady; // Select a target index at random
-        nReady = 0; // Reset counter to reuse for indexing
+        int i = 0; // Reset counter to reuse for indexing
         
         // Second pass: Find the target process
         for (p = FIRST_PROC; p <= LAST_PROC; p++) {
             if (p->state == PROC_READY) {
-                if (nReady == target) {
+                if (i == target) {
                     // This is the selected process
                     p->priority = PRIO_USER;
                     p->state = PROC_RUNNING;
@@ -252,7 +245,7 @@ PRIVATE void random() {
                         switch_to(p);
                     return; // Exit after switching to the selected process
                 }
-                nReady++;
+                i++;
             }
         }
     }
@@ -264,6 +257,40 @@ PRIVATE void random() {
         switch_to(p);
 }
 
+PRIVATE void lottery(){
+	struct process *p;
+    struct process *next = IDLE;
+    int plage_debut = 0;
+    int ticket_gagnant = ticks % total_nb_tickets;
+    
+    for (p = FIRST_PROC; p <= LAST_PROC; p++)
+    {
+        if (p->state != PROC_READY)
+            continue;
+
+        int plage_fin = plage_debut + 100 + 40 - (p->priority) - (p->nice)+p->counter;
+        
+        if(plage_fin > ticket_gagnant){
+            if(next != IDLE) next->counter++;
+            next = p;
+        } else {
+            if(p != IDLE){
+                p->counter++;
+            }
+            
+        }
+        plage_debut = plage_fin;
+    }
+
+    /* Switch to next process. */
+    next->priority = PRIO_USER;
+    next->state = PROC_RUNNING;
+    next->counter = PROC_QUANTUM;
+    if (curr_proc != next)
+        switch_to(next);
+}
+
+PUBLIC ProcessMethod method = RANDOM;
 
 /**
  * @brief Yields the processor.
@@ -279,7 +306,8 @@ PUBLIC void yield(void)
 
 	/* Remember this process. */
 	last_proc = curr_proc;
-
+	total_nb_tickets = 0;
+	nReady = 0;
 	/* Check alarm. */
 	for (p = FIRST_PROC; p <= LAST_PROC; p++)
 	{
@@ -290,6 +318,11 @@ PUBLIC void yield(void)
 		/* Alarm has expired. */
 		if ((p->alarm) && (p->alarm < ticks))
 			p->alarm = 0, sndsig(p, SIGALRM);
+
+		total_nb_tickets += 100 + 40 - (p->priority) - (p->nice)+p->counter;
+
+		if (p->state == PROC_READY)
+			nReady++;
 	}
 
 	/* Choose a process to run next. */
@@ -305,6 +338,9 @@ PUBLIC void yield(void)
 			break;
 		case RANDOM:
 			random();
+			break;
+		case LOTTERY:
+			lottery();
 			break;
 		default:
 			break;
